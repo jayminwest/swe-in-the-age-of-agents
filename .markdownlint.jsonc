@@ -1,0 +1,46 @@
+// markdownlint configuration for book content.
+//
+// Run locally with markdownlint-cli2 (or `make lint`):
+//   npx markdownlint-cli2 "**/*.md"
+//
+// Tuned for long-form technical prose authored by humans and agents, where a
+// few default rules fight the house style more than they help.
+{
+  "default": true,
+
+  // MD013: line length. Prose is written one-sentence-per-idea with no hard
+  // wrap; enforcing a column limit would add noise to every paragraph.
+  "MD013": false,
+
+  // MD033: inline HTML. Content intentionally uses tags like <details>,
+  // <summary>, <br>, <sub>/<sup>, and angle-bracket placeholders (<slug>,
+  // <domain>) in examples. Allow them rather than escaping every instance.
+  "MD033": false,
+
+  // MD041: first line in a file should be a top-level heading. Every content
+  // file opens with YAML frontmatter (--- ... ---), so the first line is never
+  // a heading.
+  "MD041": false,
+
+  // MD024: duplicate heading text. Reference-style sections legitimately repeat
+  // headings (e.g. "Example", "Recommendation") across sibling sections; only
+  // flag siblings, not headings under different parents.
+  "MD024": { "siblings_only": true },
+
+  // MD025: single H1. By default markdownlint counts the YAML frontmatter
+  // `title:` as the document's H1, so the file's own `# Heading` reads as a
+  // second top-level heading and every content file trips the rule. The house
+  // convention is frontmatter `title:` + one `#` H1, so disable the
+  // front-matter-title heuristic and let the real `#` be the single H1.
+  "MD025": { "front_matter_title": "" },
+
+  // MD034: bare URLs. Footnote-style and citation lines occasionally include
+  // raw URLs; autolinking them is not always desired in source.
+  "MD034": false,
+
+  // MD060: table column style. The book uses compact pipe tables extensively
+  // (see CLAUDE.md's "tables over prose" guidance) with varied cell padding.
+  // Table whitespace is owned by the markdown formatter (prettier), so this
+  // opinionated rule only produces noise here.
+  "MD060": false
+}

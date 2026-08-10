@@ -1,0 +1,19 @@
+# macOS system files
+.DS_Store
+**/.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Node / tool caches
+node_modules/
+.ruff_cache/
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+
+.env

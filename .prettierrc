@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/prettierrc",
+  "proseWrap": "preserve",
+  "tabWidth": 2,
+  "useTabs": false,
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": ["*.md", "*.markdown"],
+      "options": {
+        "proseWrap": "preserve"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+# prettier ignore list.
+#
+# Scope: prettier formats authored markdown. Run with:
+#   npx prettier --check "**/*.md"
+#
+# proseWrap is "preserve" in .prettierrc, so prose is never reflowed; prettier
+# only normalizes blank lines, emphasis markers, and table column padding (see
+# the MD060 note in .markdownlint.jsonc — table whitespace is prettier's job).
+
+node_modules/
