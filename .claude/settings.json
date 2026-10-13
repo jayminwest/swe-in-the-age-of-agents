@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(/human/**)",
+      "Write(/human/**)",
+      "NotebookEdit(/human/**)"
+    ]
+  }
+}

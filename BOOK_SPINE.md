@@ -2,7 +2,7 @@
 
 The living plan for this book. Nothing gets drafted as prose until the layer above it is locked.
 
-**Status:** Layer 2 in progress. Layers 3–6 blocked.
+**Status:** As of 2026-10-13 the top-down lock is dropped. Prose is written now in `gen/`; this file keeps the governing rules, open questions, and decision log. `gen/BOOK.md` holds the book's current shape.
 
 ---
 
@@ -42,7 +42,7 @@ Source material lives in the predecessor repo, which is frozen for reading only:
 6. Hard rules live in code, not in prompts. Anything a prompt begs an agent not to do is a check that was not written.
 7. Durability test, applied per paragraph: mentally delete every proper noun, version number, and date. The argument must still stand.
 
-See `STYLE_GUIDE.md` for voice, evidence standards, and the three-tier claim classification. The style guide predates this rework and needs one editing pass against these rules — tracked in Open Questions.
+See `STYLE_GUIDE.md` for voice, evidence, and the three-tier claim classification (rewritten 2026-10-13).
 
 ### Reader precondition (locked)
 
@@ -209,7 +209,6 @@ Removed from the spine entirely. Recorded here so the decisions are not relitiga
 - Whether Part I is two chapters or three, driven by where the harness foundation lands.
 - Target length. The predecessor is 204,000 words. Unstated target means unbounded scope.
 - What grounds claims once vendor names, benchmarks, prices, and dates are gone. Three evidence categories remain — observable behavior, documented patterns, reproducible examples — and they have to carry the whole book. This constrains what can be claimed, not just how it is cited.
-- One editing pass on `STYLE_GUIDE.md` against the governing rules above.
 - Publishing and repository cutover from the predecessor. Deferred; not blocking.
 
 ---
@@ -222,3 +221,11 @@ Removed from the spine entirely. Recorded here so the decisions are not relitiga
 | 2026-08-10 | "Never used an agent" is a precondition, not a rung. Short on-ramp section at most. |
 | 2026-08-10 | New repository. Predecessor stays readable and unfrozen for now; retirement deferred. |
 | 2026-08-10 | Carry-over limited to the style guide, markdown lint config, and the frontmatter validator. No agent machinery. |
+| 2026-10-13 | Drop the top-down layer lock; spine becomes a map. "I'm sick of this book not being ready." |
+| 2026-10-13 | `human/` (his writing, agent read-only) and `gen/` (AI prose in his voice). "This is honestly like a knowledgebase that is structured as a book." |
+| 2026-10-13 | gen/ unit is one concept file per idea; `gen/BOOK.md` orders them. Interview first, then draft. |
+| 2026-10-13 | Sources: human/, inbox, interviews only. "I do NOT want agents looking for information online passively." Predecessor repo: never. |
+| 2026-10-13 | Ch1/Ch2 in human/ are canonical; gen/ fills gaps. Voice: his ch1/ch2 plus governing rules. |
+| 2026-10-13 | Ch6 and Ch7 swapped. "I do think chapter 6 and 7 should be swapped." (memo 2026-10-12) |
+| 2026-10-13 | Style guide rewritten for gen/: third person with occasional "we". "The goal is tight, information dense, terse prose. No fluff." `make validate` checks gen/concepts/. |
+| 2026-10-13 | Workflow changed to draft-first; gaps go to per-concept open questions. "What are we doing this for? ... yes, go ahead and start drafting" |

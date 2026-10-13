@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Validate book-content frontmatter.
+Validate gen/ concept files.
 
-Scans chapter markdown (excluding `_questions.md` seed files) and checks that
-each entry carries the required structural frontmatter with a consistent
-`order` sort key. This is the deterministic, headless counterpart to the
-`managing-book-operations` skill's frontmatter check — a fresh agent (or CI)
-can run it with no LLM in the loop.
+Each concept in `gen/concepts/` must carry frontmatter with a known `status`,
+a non-empty `sources` list whose paths exist, and a `related` list. Prose may
+not contain em-dashes or markdown tables (STYLE_GUIDE.md). Stdlib only, so
+it runs with no setup.
 
 Usage: python3 scripts/validate-frontmatter.py [PATH ...]
-       (defaults to scanning `chapters/`; exits non-zero on any violation)
+       (defaults to scanning `gen/concepts/`; exits non-zero on any violation)
 """
 
 from __future__ import annotations
@@ -18,125 +17,91 @@ import re
 import sys
 from pathlib import Path
 
-# Structural fields every content entry must declare.
-REQUIRED_FIELDS = (
-    "title",
-    "part",
-    "part_title",
-    "chapter",
-    "section",
-    "order",
-    "last_updated",
-)
-# Fields that must parse as integers.
-INT_FIELDS = ("part", "chapter", "section")
-# Fields validated as YYYY-MM-DD only when present.
-DATE_FIELDS = ("created", "last_updated")
-
-DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
-
-# Seed/index files that intentionally carry no structural frontmatter.
-SKIP_NAMES = frozenset({"_questions.md"})
+STATUSES = frozenset({"draft", "reviewed", "yours"})
+FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)", re.DOTALL)
+LIST_RE = re.compile(r"^\[(.*)\]$")
+TABLE_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*\|", re.MULTILINE)
 
 
-def extract_frontmatter(md_path: Path) -> dict[str, str] | None:
-    """Return the YAML frontmatter as a flat dict, or None if absent."""
+def parse(md_path: Path) -> tuple[dict[str, str], str] | None:
+    """Return (frontmatter as a flat dict, body), or None if absent."""
     try:
         content = md_path.read_text(encoding="utf-8")
     except OSError:
         return None
-
     match = FRONTMATTER_RE.match(content)
     if not match:
         return None
-
     frontmatter: dict[str, str] = {}
     for line in match.group(1).split("\n"):
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        frontmatter[key.strip()] = value.strip()
-    return frontmatter
+        if ":" in line:
+            key, value = line.split(":", 1)
+            frontmatter[key.strip()] = value.strip()
+    return frontmatter, match.group(2)
 
 
-def validate_fields(frontmatter: dict[str, str]) -> list[str]:
-    """Return error messages for a single entry's frontmatter dict."""
+def parse_list(value: str | None) -> list[str] | None:
+    """Parse an inline `[a, b]` list; None if the value is not a list."""
+    match = LIST_RE.match(value or "")
+    if not match:
+        return None
+    return [item.strip() for item in match.group(1).split(",") if item.strip()]
+
+
+def source_exists(source: str) -> bool:
+    """A source resolves in place, or in inbox/done/ once its capture is processed."""
+    path = Path(source)
+    if path.exists():
+        return True
+    return path.parts[:1] == ("inbox",) and (Path("inbox/done") / Path(*path.parts[1:])).exists()
+
+
+def validate_file(md_path: Path) -> list[str]:
+    """Return error messages for one concept file."""
+    parsed = parse(md_path)
+    if parsed is None:
+        return ["missing or unreadable frontmatter block"]
+    frontmatter, body = parsed
     errors: list[str] = []
 
-    for field in REQUIRED_FIELDS:
-        if field not in frontmatter:
-            errors.append(f"missing required field '{field}'")
+    status = frontmatter.get("status")
+    if status not in STATUSES:
+        errors.append(f"status must be one of {sorted(STATUSES)} (got '{status}')")
 
-    for field in INT_FIELDS:
-        value = frontmatter.get(field)
-        if value is not None and not value.lstrip("-").isdigit():
-            errors.append(f"field '{field}' is not an integer (got '{value}')")
+    sources = parse_list(frontmatter.get("sources"))
+    if not sources:
+        errors.append("sources must be a non-empty [list]")
+    else:
+        errors += [f"source not found: {s}" for s in sources if not source_exists(s)]
 
-    for field in DATE_FIELDS:
-        value = frontmatter.get(field)
-        if value is not None and not DATE_RE.match(value):
-            errors.append(f"field '{field}' is not YYYY-MM-DD (got '{value}')")
+    if parse_list(frontmatter.get("related")) is None:
+        errors.append("related must be a [list] (may be empty)")
 
-    expected = _expected_order(frontmatter)
-    actual = frontmatter.get("order")
-    if expected is not None and actual is not None and actual != expected:
-        errors.append(f"order '{actual}' does not match part.chapter.section '{expected}'")
+    if "—" in body:
+        errors.append("em-dash in prose")
+
+    if TABLE_RE.search(body):
+        errors.append("markdown table in prose")
 
     return errors
 
 
-def _expected_order(frontmatter: dict[str, str]) -> str | None:
-    """Build the expected `order` key from part/chapter/section, if all valid."""
-    parts = [frontmatter.get(field) for field in INT_FIELDS]
-    if any(p is None or not p.lstrip("-").isdigit() for p in parts):
-        return None
-    return ".".join(p for p in parts if p is not None)
-
-
-def iter_content_files(roots: list[Path]) -> list[Path]:
-    """Collect markdown content files under the given roots, sorted and de-duped."""
-    seen: set[Path] = set()
-    for root in roots:
-        for md_path in sorted(root.rglob("*.md")):
-            if md_path.name in SKIP_NAMES:
-                continue
-            seen.add(md_path)
-    return sorted(seen)
-
-
-def validate(roots: list[Path]) -> dict[Path, list[str]]:
-    """Validate every content file under roots; return path -> error messages."""
-    failures: dict[Path, list[str]] = {}
-    for md_path in iter_content_files(roots):
-        frontmatter = extract_frontmatter(md_path)
-        if frontmatter is None:
-            failures[md_path] = ["missing or unreadable frontmatter block"]
-            continue
-        errors = validate_fields(frontmatter)
-        if errors:
-            failures[md_path] = errors
-    return failures
-
-
 def main(argv: list[str] | None = None) -> int:
-    """Entry point: scan args (default `chapters/`), print results, return status."""
+    """Entry point: scan args (default `gen/concepts/`), print results, return status."""
     args = sys.argv[1:] if argv is None else argv
-    roots = [Path(a) for a in args] if args else [Path("chapters")]
+    roots = [Path(a) for a in args] if args else [Path("gen/concepts")]
+    files = sorted({p for root in roots for p in root.rglob("*.md")})
 
-    checked = iter_content_files(roots)
-    failures = validate(roots)
-
+    failures = {p: errs for p in files if (errs := validate_file(p))}
+    for md_path, messages in sorted(failures.items()):
+        for message in messages:
+            print(f"✗ {md_path}: {message}")
     if failures:
-        for md_path in sorted(failures):
-            for message in failures[md_path]:
-                print(f"✗ {md_path}: {message}")
-        print(f"\n✗ {len(failures)} of {len(checked)} content files failed validation")
+        print(f"\n✗ {len(failures)} of {len(files)} concept files failed validation")
         return 1
-
-    print(f"✓ {len(checked)} content files passed frontmatter validation")
+    print(f"✓ {len(files)} concept files passed validation")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())
